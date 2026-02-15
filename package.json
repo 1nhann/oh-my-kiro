@@ -1,0 +1,50 @@
+{
+  "name": "kiro",
+  "version": "1.0.0",
+  "description": "Kiro: A multi-agent spec-driven coding plugin for OpenCode",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "data",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target bun --format esm",
+    "build:types": "tsc --emitDeclarationOnly --skipLibCheck || true",
+    "build:full": "bun run build && bun run build:types",
+    "cases": "bash cases/run.sh",
+    "cases:sdd": "bash cases/sdd.sh",
+    "cases:edge": "bash cases/edge.sh",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "bun run clean && bun run build",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "keywords": [
+    "opencode",
+    "plugin",
+    "kiro",
+    "agents",
+    "spec-driven"
+  ],
+  "author": "Kiro Team",
+  "license": "MIT",
+  "dependencies": {
+    "@opencode-ai/plugin": "^1.2.4",
+    "@opencode-ai/sdk": "^1.2.4",
+    "zod": "^3.22.4",
+    "vscode-jsonrpc": "^8.2.0"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "typescript": "^5.0.0"
+  }
+}

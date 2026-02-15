@@ -1,0 +1,73 @@
+{
+  "$schema": "./kiro.schema.json",
+  "spec_path": ".kiro/specs",
+  "debug": false,
+  "agent_model": "claude-sonnet-4-20250514",
+
+  "features": {
+    "requirements_first": true,
+    "spec_execution": true
+  },
+
+  "contextRecovery": {
+    "enabled": true,
+    "maxTokens": 180000,
+    "strategy": "hybrid",
+    "keepHead": 3,
+    "keepTail": 10
+  },
+
+  "backgroundTasks": {
+    "enabled": true,
+    "maxConcurrent": 5,
+    "timeout": 600000,
+    "cleanupInterval": 3600000
+  },
+
+  "lsp": {
+    "enabled": true,
+    "languages": ["typescript", "javascript", "python", "go", "rust"]
+  },
+
+  "modelFallback": {
+    "enabled": true,
+    "maxAttempts": 3,
+    "retryDelay": 1000,
+    "strategy": "priority",
+    "models": [
+      {
+        "id": "claude-sonnet-4-20250514",
+        "name": "Claude Sonnet 4",
+        "provider": "anthropic",
+        "type": "chat",
+        "contextWindow": 200000,
+        "enabled": true,
+        "priority": 1,
+        "costTier": 2,
+        "capabilities": { "vision": true, "tools": true, "streaming": true }
+      },
+      {
+        "id": "claude-3-5-sonnet-20241022",
+        "name": "Claude 3.5 Sonnet",
+        "provider": "anthropic",
+        "type": "chat",
+        "contextWindow": 200000,
+        "enabled": true,
+        "priority": 2,
+        "costTier": 2,
+        "capabilities": { "vision": true, "tools": true, "streaming": true }
+      },
+      {
+        "id": "gpt-4o",
+        "name": "GPT-4o",
+        "provider": "openai",
+        "type": "chat",
+        "contextWindow": 128000,
+        "enabled": true,
+        "priority": 3,
+        "costTier": 2,
+        "capabilities": { "vision": true, "tools": true, "streaming": true }
+      }
+    ]
+  }
+}
