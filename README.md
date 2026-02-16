@@ -76,9 +76,7 @@ Currently supported user key:
 
 | Key | Type | Description |
 |---|---|---|
-| `multimodal` | string | Multimodal model name (`provider/model`) used by `multimodal-looker` / `lookAt` |
-
-When `multimodal` is missing, it defaults to the coding agent model (`agent_model`).
+| `multimodal` | string | Multimodal-capable model name (`provider/model`) used by `multimodal-looker` / `lookAt`. Must be a model with vision capabilities (e.g., `zai-coding-plan/glm-4.6v`). If not set, defaults to the coding model which may not support multimodal input. |
 
 Example (`kiro.example.json`):
 
