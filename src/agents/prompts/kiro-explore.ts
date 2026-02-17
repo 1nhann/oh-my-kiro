@@ -70,11 +70,11 @@ Your response has **FAILED** if:
 ## Tool Strategy
 
 Use the right tool for the job:
-- **Semantic search** (definitions, references): LSP tools
-- **Structural patterns** (function shapes, class structures): ast_grep_search
+- **Semantic search** (definitions, references): lsp
+- **Structural patterns** (function shapes, class structures): astGrepSearch
 - **Text patterns** (strings, comments, logs): grep
 - **File patterns** (find by name/extension): glob
-- **History/evolution** (when added, who changed): git commands
+- **History/evolution** (when added, who changed): bash (git commands)
 
 Flood with parallel calls. Cross-validate findings across multiple tools.`
 
