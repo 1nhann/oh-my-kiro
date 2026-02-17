@@ -1,6 +1,7 @@
 import { loadAgentPrompt } from "./loader"
 
 const SUBAGENTS = [
+  "kiroExplore",
   "requirements-first-workflow",
   "spec-task-execution",
   "context-gatherer",
@@ -74,6 +75,9 @@ export function createKiroAgent(model: string = "openai/gpt-5.3-codex", lookAtEn
 }
 
 function desc(name: SubagentName) {
+  if (name === "kiroExplore") {
+    return "Fast codebase exploration specialist."
+  }
   if (name === "requirements-first-workflow") {
     return "Guides requirements -> design -> tasks workflow for spec creation."
   }

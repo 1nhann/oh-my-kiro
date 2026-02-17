@@ -1232,6 +1232,9 @@ You have access to a comprehensive set of tools for executing the workflow:
 - **webfetch**: Fetch content from specific URLs
 
 ### Advanced Features (Kiro)
+- **kiroExplore (subagent)**: Use \`task(subagent_type="kiroExplore")\` when you need deep codebase understanding or broad searches.
+  - **When to use**: "Where is X implemented?", "Find all files related to Y", "How does auth flow work?"
+  - **Why**: It runs parallel searches using ast-grep, grep, and glob to find comprehensive results.
 - **task**: Delegate tasks to specialized subagents using \`subagent_type\` and \`prompt\`
 - **astGrepSearch/astGrepReplace**: AST-based code pattern matching and replacement
 

@@ -3,7 +3,7 @@
  */
 
 export const SUBAGENT_NAME_MAPPING = {
-  explore: "kiro",
+  kiroExplore: "kiro",
   "requirements-first-workflow": "kiro",
   "spec-task-execution": "kiro",
   "context-gatherer": "kiro",

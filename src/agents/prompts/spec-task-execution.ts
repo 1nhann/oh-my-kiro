@@ -102,6 +102,11 @@ For maximum efficiency, use background tasks to run multiple operations in paral
   - \`taskId\`: cancel one task.
   - \`all=true\`: cancel all running/pending tasks and get a summary table.
 
+### Advanced Code Exploration (Subagent)
+- **kiroExplore**: Use \`task(subagent_type="kiroExplore")\` when you need deep codebase understanding or broad searches.
+  - **When to use**: "Where is X implemented?", "Find all files related to Y", "How does auth flow work?"
+  - **Why**: It runs parallel searches using ast-grep, grep, and glob to find comprehensive results.
+
 ### LSP Tools (Code Intelligence)
 - **kiroGetDiagnostics**: Get code diagnostics (errors, warnings) for files.
 - **kiroRenameSymbol**: Attempt semantic rename first; if unavailable or incomplete, use astGrepReplace/edit and re-check with kiroGetDiagnostics.

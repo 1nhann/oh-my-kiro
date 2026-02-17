@@ -1,5 +1,6 @@
 import contextGatherer from "./context-gatherer"
 import generalTaskExecution from "./general-task-execution"
+import kiroExplore from "./kiro-explore"
 import multimodalLooker from "./multimodal-looker"
 import orchestrator from "./orchestrator"
 import requirementsFirstWorkflow from "./requirements-first-workflow"
@@ -10,6 +11,7 @@ export const AGENT_PROMPTS = {
   "requirements-first-workflow": requirementsFirstWorkflow,
   "spec-task-execution": specTaskExecution,
   "context-gatherer": contextGatherer,
+  kiroExplore,
   "general-task-execution": generalTaskExecution,
   "multimodal-looker": multimodalLooker,
 } as const

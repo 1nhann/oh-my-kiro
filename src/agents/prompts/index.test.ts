@@ -8,6 +8,7 @@ describe("prompt registry", () => {
       "requirements-first-workflow",
       "spec-task-execution",
       "context-gatherer",
+      "kiroExplore",
       "general-task-execution",
       "multimodal-looker",
     ])

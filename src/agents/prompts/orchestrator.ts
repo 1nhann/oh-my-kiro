@@ -279,7 +279,7 @@ The user will likely need to refine the specification as implementation progress
 You have access to powerful tools for code analysis and exploration. Use them appropriately:
 
 ### 1. Advanced Code Exploration (Subagent)
-Use \`task(subagent_type="explore")\` when you need deep codebase understanding or broad searches.
+Use \`task(subagent_type="kiroExplore")\` when you need deep codebase understanding or broad searches.
 - **When to use**: "Where is X implemented?", "Find all files related to Y", "How does the auth flow work?"
 - **Why**: It runs parallel searches using ast-grep, grep, and glob to find comprehensive results.
 

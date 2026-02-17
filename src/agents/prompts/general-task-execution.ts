@@ -132,6 +132,11 @@ For maximum efficiency, use background tasks to run multiple operations in paral
 - Starting long-running operations while continuing other work
 - Maximizing parallelism when the user requests parallel execution
 
+### Advanced Code Exploration (Subagent)
+- **kiroExplore**: Use \`task(subagent_type="kiroExplore")\` when you need deep codebase understanding or broad searches.
+  - **When to use**: "Where is X implemented?", "Find all files related to Y", "How does auth flow work?"
+  - **Why**: It runs parallel searches using ast-grep, grep, and glob to find comprehensive results.
+
 ### LSP Tools (Code Intelligence)
 - **kiroGetDiagnostics**: Get code diagnostics (errors, warnings) for files.
 - **kiroRenameSymbol**: Best-effort semantic rename; fall back to astGrepReplace/edit when needed.

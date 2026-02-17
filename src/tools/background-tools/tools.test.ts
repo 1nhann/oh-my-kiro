@@ -10,7 +10,7 @@ import {
 function task(overrides: Partial<BackgroundTaskMeta> = {}): BackgroundTaskMeta {
   return {
     taskId: "bg-1",
-    agent: "explore",
+    agent: "kiroExplore",
     prompt: "find auth flow",
     status: "running",
     createdAt: new Date("2026-01-01T00:00:00.000Z"),

@@ -334,7 +334,7 @@ export function createBackgroundTaskManager(client: OpencodeClient): IBackground
 function getAgentSystemPrompt(agent: string): string {
   // Fallback prompts for background tasks when no explicit system prompt is provided.
   const prompts: Record<string, string> = {
-    explore: "You are a fast codebase exploration agent.",
+    kiroExplore: "You are a fast codebase exploration agent.",
     "requirements-first-workflow": "You are a requirements-first workflow agent.",
     "spec-task-execution": "You are a spec-driven task execution agent.",
     "context-gatherer": "You are a context gathering agent.",

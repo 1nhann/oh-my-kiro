@@ -116,7 +116,7 @@ Use this tool when you want to run multiple tasks concurrently. The task runs
 asynchronously and you can check its status later using backgroundTaskStatus.
 
 Supported agents:
-- explore: Fast codebase exploration
+- kiroExplore: Fast codebase exploration
 - requirements-first-workflow: Requirements gathering and spec creation
 - spec-task-execution: Execute tasks from a spec
 - context-gatherer: Gather context for a task
@@ -125,7 +125,7 @@ Supported agents:
 Returns a taskId that can be used to check status or cancel the task.`,
 
     parameters: {
-      agent: tool.schema.string().describe("The agent type to use (explore, spec-task-execution, etc.)"),
+      agent: tool.schema.string().describe("The agent type to use (kiroExplore, spec-task-execution, etc.)"),
       prompt: tool.schema.string().describe("The task prompt for the subagent"),
       description: tool.schema.string().optional().describe("Optional description for tracking"),
     },
