@@ -8,7 +8,17 @@ import type { BuiltinCommandName } from "../features/builtin-commands/types"
 export const SPEC_PATH = ".kiro/specs"
 
 /** Default coding model */
-export const DEFAULT_AGENT_MODEL = "zai-coding-plan/glm-5"
+export const DEFAULT_AGENT_MODEL = "openai/gpt-5.3-codex"
+
+/**
+ * LookAt feature configuration
+ */
+export interface LookAtConfig {
+  /** Enable or disable the lookAt tool and multimodal-looker agent */
+  enable: boolean
+  /** Model to use for multimodal analysis (defaults to agent_model if not specified) */
+  model?: string
+}
 
 /**
  * Kiro Plugin Configuration
@@ -24,8 +34,11 @@ export interface KiroPluginConfig {
   /** Coding agent model (fixed, not user configurable) */
   agent_model: string
 
-  /** Multimodal model (the only user-configurable value) */
-  multimodal: string
+  /** LookAt feature configuration (image/PDF analysis) */
+  lookAt: LookAtConfig
+
+  /** @deprecated Use lookAt.model instead */
+  multimodal?: string
 }
 
 /** Default configuration values */
@@ -33,7 +46,10 @@ export const DEFAULT_CONFIG: KiroPluginConfig = {
   disabled_tools: [],
   disabled_commands: [],
   agent_model: DEFAULT_AGENT_MODEL,
-  multimodal: DEFAULT_AGENT_MODEL,
+  lookAt: {
+    enable: false,
+    model: undefined, // Will default to agent_model
+  },
 }
 
 /**
@@ -45,8 +61,15 @@ export function mergeConfig(userConfig: Partial<KiroPluginConfig>): KiroPluginCo
     ...userConfig,
   }
 
+  // Handle lookAt config with defaults
+  const lookAt: LookAtConfig = {
+    enable: userConfig.lookAt?.enable ?? false,
+    // Default model to agent_model if not specified
+    model: userConfig.lookAt?.model ?? base.agent_model,
+  }
+
   return {
     ...base,
-    multimodal: userConfig.multimodal ?? base.agent_model,
+    lookAt,
   }
 }

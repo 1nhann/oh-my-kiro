@@ -74,18 +74,21 @@ Edit ~/.config/opencode/opencode.jsonc
 Kiro reads config from one file only:
 - `~/.config/opencode/kiro/kiro.json`
 
-Currently supported user key:
+Currently supported config keys:
 
-| Key | Type | Description |
-|---|---|---|
-| `multimodal` | string | Multimodal-capable model name (`provider/model`) used by `multimodal-looker` / `lookAt`. Must be a model with vision capabilities (e.g., `zai-coding-plan/glm-4.6v`). If not set, defaults to the coding model which may not support multimodal input. |
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `lookAt.enable` | boolean | `false` | Enable/disable the `lookAt` multimodal tool |
+| `lookAt.model` | string | - | Multimodal-capable model name (`provider/model`) used by `lookAt`. Required if `lookAt.enable` is `true`. Must be a model with vision capabilities (e.g., `openai/gpt-5.3-codex`). |
 
 Example (`kiro.example.json`):
 
-
 ```json
 {
-  "multimodal": "zai-coding-plan/glm-4.6v"
+  "lookAt": {
+    "enable": true,
+    "model": "openai/gpt-5.3-codex"
+  }
 }
 ```
 

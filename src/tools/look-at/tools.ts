@@ -134,16 +134,16 @@ Original error: ${createResult.error}`
       log(`[look_at] Created session: ${sessionID}`)
 
       // Model selection:
-      // 1. multimodal from config
+      // 1. lookAt.model from config
       // 2. if malformed, don't specify model (let OpenCode decide)
-      const configModel = pluginConfig?.multimodal
+      const configModel = pluginConfig?.lookAt?.model
       let agentModel: { providerID: string; modelID: string } | undefined
       if (configModel) {
         const [providerID, ...modelParts] = configModel.split("/")
         if (providerID && modelParts.length > 0) {
           const modelID = modelParts.join("/")
           agentModel = { providerID, modelID }
-          log(`[look_at] Using multimodal config model: ${providerID}/${modelID}`)
+          log(`[look_at] Using lookAt.model config: ${providerID}/${modelID}`)
         }
       }
       // If malformed, agentModel stays undefined - let OpenCode decide

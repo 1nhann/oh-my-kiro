@@ -3,7 +3,7 @@ import prompt from "./prompts/multimodal-looker"
 
 export const MULTIMODAL_LOOKER_AGENT = "multimodal-looker" as const
 
-export function createMultimodalLookerAgent(model: string = "zai-coding-plan/glm-4.6v") {
+export function createMultimodalLookerAgent(model: string = "openai/gpt-5.3-codex") {
   const restrictions = createAgentToolAllowlist(["read"])
 
   return {

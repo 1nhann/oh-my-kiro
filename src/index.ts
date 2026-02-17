@@ -28,13 +28,16 @@ const KiroPlugin: Plugin = async (ctx) => {
   // 1. Load configuration
   const pluginConfig = loadPluginConfig(ctx.directory, ctx)
 
-  // 2. Create tools (with managers)
+  // 2. Check if lookAt feature is enabled
+  const lookAtEnabled = pluginConfig.lookAt?.enable !== false
+
+  // 3. Create tools (with managers)
   const { tools } = createTools({
     ctx,
     pluginConfig,
   })
 
-  // 3. Load builtin commands (e.g., /spec)
+  // 4. Load builtin commands (e.g., /spec)
   const builtinCommands = loadBuiltinCommands(pluginConfig.disabled_commands)
 
   // Log loaded features
@@ -44,6 +47,9 @@ const KiroPlugin: Plugin = async (ctx) => {
     "LSP tools",
     `/spec command (${Object.keys(builtinCommands).length} builtin)`,
   ]
+  if (lookAtEnabled) {
+    features.push("lookAt (multimodal)")
+  }
   console.log(`[KiroPlugin] Features: ${features.join(", ")}`)
   console.log(`[KiroPlugin] Loaded ${Object.keys(tools).length} tools`)
   console.log("[KiroPlugin] Loaded successfully.")
@@ -52,17 +58,22 @@ const KiroPlugin: Plugin = async (ctx) => {
     tool: tools as Record<string, ToolDefinition>,
     config: async (input: Config) => {
       // Inject kiro agent
-      const kiroAgent = createKiroAgent(pluginConfig.agent_model)
+      const kiroAgent = createKiroAgent(pluginConfig.agent_model, lookAtEnabled)
       if (kiroAgent) {
         input.agent = input.agent || {}
 
         // Cast to any because of potential type mismatch with strict SDK types
         // In runtime, this should work as Config merges agent definitions
         input.agent["kiro"] = kiroAgent as any
-        for (const [name, agent] of Object.entries(createKiroSubagents(pluginConfig.agent_model))) {
+        for (const [name, agent] of Object.entries(createKiroSubagents(pluginConfig.agent_model, lookAtEnabled))) {
           input.agent[name] = agent as any
         }
-        input.agent["multimodal-looker"] = createMultimodalLookerAgent(pluginConfig.multimodal) as any
+
+        // Only register multimodal-looker agent if lookAt is enabled
+        if (lookAtEnabled) {
+          const multimodalModel = pluginConfig.lookAt?.model || pluginConfig.agent_model
+          input.agent["multimodal-looker"] = createMultimodalLookerAgent(multimodalModel) as any
+        }
       }
 
       // Inject builtin commands into OpenCode's command system

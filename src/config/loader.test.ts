@@ -64,7 +64,7 @@ describe("loadPluginConfig", () => {
       writeFileSync(
         file,
         `{
-        "multimodal": "zai-coding-plan/glm-4.6v",
+        "multimodal": "openai/gpt-5.3-codex",
         "agent_model": "demo-model",
         "disabled_tools": ["astGrepReplace"],
         "modelFallback": { "multimodal": ["openai/gpt-4.1-mini"] },
@@ -74,8 +74,8 @@ describe("loadPluginConfig", () => {
       )
 
       const config = loadPluginConfig("", ctx())
-      expect(config.multimodal).toBe("zai-coding-plan/glm-4.6v")
-      expect(config.agent_model).toBe("zai-coding-plan/glm-5")
+      expect(config.multimodal).toBe("openai/gpt-5.3-codex")
+      expect(config.agent_model).toBe("openai/gpt-5.3-codex")
       expect(config.disabled_tools).toEqual([])
     })
   })

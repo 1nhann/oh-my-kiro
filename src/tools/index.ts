@@ -76,6 +76,11 @@ const basicToolFactories: Record<string, (ctx: PluginInput, config?: KiroPluginC
 const toolsRequiringConfig = new Set(["lookAt"])
 
 /**
+ * Tools that depend on lookAt feature being enabled
+ */
+const lookAtDependentTools = new Set(["lookAt"])
+
+/**
  * Create all tools from built-in definitions and managers
  */
 export function createTools(args: {
@@ -88,18 +93,25 @@ export function createTools(args: {
   // Get list of disabled tools from config
   const disabledTools = new Set(pluginConfig.disabled_tools || [])
 
+  // Check if lookAt feature is enabled
+  const lookAtEnabled = pluginConfig.lookAt?.enable !== false
+
   // Create managers for tools that need shared state
   const managers = createManagers(ctx)
 
   // Register basic tools from built-in factories
   for (const [name, factory] of Object.entries(basicToolFactories)) {
-    if (!disabledTools.has(name)) {
-      // Pass pluginConfig to tools that need it
-      if (toolsRequiringConfig.has(name)) {
-        tools[name] = factory(ctx, pluginConfig)
-      } else {
-        tools[name] = factory(ctx)
-      }
+    // Skip if tool is in disabled list
+    if (disabledTools.has(name)) continue
+
+    // Skip lookAt-dependent tools if lookAt is disabled
+    if (!lookAtEnabled && lookAtDependentTools.has(name)) continue
+
+    // Pass pluginConfig to tools that need it
+    if (toolsRequiringConfig.has(name)) {
+      tools[name] = factory(ctx, pluginConfig)
+    } else {
+      tools[name] = factory(ctx)
     }
   }
 
@@ -124,6 +136,9 @@ export function createTools(args: {
     console.log(`[Kiro] Registered ${Object.keys(tools).length} tools:`, Object.keys(tools).join(", "))
     if (disabledTools.size > 0) {
       console.log(`[Kiro] Disabled tools:`, Array.from(disabledTools).join(", "))
+    }
+    if (!lookAtEnabled) {
+      console.log(`[Kiro] lookAt feature disabled`)
     }
   }
 

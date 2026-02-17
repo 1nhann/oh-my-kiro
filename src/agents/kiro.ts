@@ -9,7 +9,7 @@ const SUBAGENTS = [
 
 type SubagentName = (typeof SUBAGENTS)[number]
 
-function basePermission() {
+function basePermission(lookAtEnabled: boolean = true) {
   return {
     prework: "allow",
     kiroSpecTaskStatus: "allow",
@@ -24,7 +24,8 @@ function basePermission() {
 
     astGrepSearch: "allow",
     astGrepReplace: "allow",
-    lookAt: "allow",
+    // Only include lookAt permission if the feature is enabled
+    ...(lookAtEnabled ? { lookAt: "allow" as const } : {}),
     kiroGetDiagnostics: "allow",
     kiroRenameSymbol: "allow",
 
@@ -52,8 +53,8 @@ function basePermission() {
  * The permission table is aligned with the actual tools registered in the plugin.
  * Tools are grouped by category for easier maintenance.
  */
-export function createKiroAgent(model: string = "zai-coding-plan/glm-5") {
-  const prompt = loadAgentPrompt("orchestrator", model)
+export function createKiroAgent(model: string = "openai/gpt-5.3-codex", lookAtEnabled: boolean = true) {
+  const prompt = loadAgentPrompt("orchestrator", model, lookAtEnabled)
 
   if (!prompt) {
     console.error("Failed to load orchestrator prompt")
@@ -68,7 +69,7 @@ export function createKiroAgent(model: string = "zai-coding-plan/glm-5") {
     prompt,
     temperature: 0.1,
     color: "#8142E6",
-    permission: basePermission(),
+    permission: basePermission(lookAtEnabled),
   }
 }
 
@@ -85,7 +86,7 @@ function desc(name: SubagentName) {
   return "General-purpose implementation and execution specialist."
 }
 
-export function createKiroSubagents(model: string = "zai-coding-plan/glm-5") {
+export function createKiroSubagents(model: string = "openai/gpt-5.3-codex", lookAtEnabled: boolean = true) {
   const agents: Record<string, {
     name: SubagentName
     description: string
@@ -98,7 +99,7 @@ export function createKiroSubagents(model: string = "zai-coding-plan/glm-5") {
   }> = {}
 
   for (const name of SUBAGENTS) {
-    const prompt = loadAgentPrompt(name, model)
+    const prompt = loadAgentPrompt(name, model, lookAtEnabled)
     if (!prompt) continue
     agents[name] = {
       name,
@@ -108,7 +109,7 @@ export function createKiroSubagents(model: string = "zai-coding-plan/glm-5") {
       model,
       prompt,
       temperature: 0.1,
-      permission: basePermission(),
+      permission: basePermission(lookAtEnabled),
     }
   }
 
