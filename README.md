@@ -55,11 +55,13 @@ From repository root:
 # 1) Install dependencies
 make install-kiro
 
-# 2) Build plugin
+# 2) Build plugin , get dist/index.js
 make build-kiro
 ```
 
 Manual registration:
+
+Edit ~/.config/opencode/opencode.jsonc
 
 ```jsonc
 {
