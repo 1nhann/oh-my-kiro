@@ -93,6 +93,15 @@ export function parseConfig(raw: unknown): { config: Partial<KiroPluginConfig>; 
       warnings.push("'multimodal' is deprecated, use 'lookAt.model' instead")
       return
     }
+    if (key === "agent_model") {
+      // Fallback model when OpenCode config doesn't specify one
+      if (!isString(value)) {
+        warnings.push("agent_model must be a string")
+        return
+      }
+      config.agent_model = value
+      return
+    }
     warnings.push(`Unknown key skipped: ${key}`)
   })
 

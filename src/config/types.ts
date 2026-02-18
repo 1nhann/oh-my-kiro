@@ -7,7 +7,7 @@ import type { BuiltinCommandName } from "../features/builtin-commands/types"
 /** Fixed spec path (not configurable) */
 export const SPEC_PATH = ".kiro/specs"
 
-/** Default coding model */
+/** Default coding model (fallback when OpenCode config doesn't specify a model) */
 export const DEFAULT_AGENT_MODEL = "openai/gpt-5.3-codex"
 
 /**
@@ -16,7 +16,7 @@ export const DEFAULT_AGENT_MODEL = "openai/gpt-5.3-codex"
 export interface LookAtConfig {
   /** Enable or disable the lookAt tool and multimodal-looker agent */
   enable: boolean
-  /** Model to use for multimodal analysis (defaults to agent_model if not specified) */
+  /** Model to use for multimodal analysis (defaults to current OpenCode model if not specified) */
   model?: string
 }
 
@@ -31,7 +31,11 @@ export interface KiroPluginConfig {
   /** List of builtin commands to disable (fixed, not user configurable) */
   disabled_commands: BuiltinCommandName[]
 
-  /** Coding agent model (fixed, not user configurable) */
+  /**
+   * Coding agent model (fallback only)
+   * This is used when OpenCode's config doesn't specify a model.
+   * The actual model is read from OpenCode's config.model at runtime.
+   */
   agent_model: string
 
   /** LookAt feature configuration (image/PDF analysis) */

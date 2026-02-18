@@ -53,6 +53,10 @@ function basePermission(lookAtEnabled: boolean = true) {
  *
  * The permission table is aligned with the actual tools registered in the plugin.
  * Tools are grouped by category for easier maintenance.
+ *
+ * Note: We don't set a fixed `model` field so that OpenCode's model selection
+ * (via /models command) is respected. The model parameter is only used for
+ * hydrating the prompt with model information.
  */
 export function createKiroAgent(model: string = "openai/gpt-5.3-codex", lookAtEnabled: boolean = true) {
   const prompt = loadAgentPrompt("orchestrator", model, lookAtEnabled)
@@ -66,7 +70,7 @@ export function createKiroAgent(model: string = "openai/gpt-5.3-codex", lookAtEn
     name: "kiro",
     description: "Kiro: Spec-Driven Development Orchestrator. Manages the lifecycle of features from requirements to implementation using a team of specialized agents.",
     mode: "primary",
-    model,
+    // Don't set model field - let OpenCode use its default/current model
     prompt,
     temperature: 0.1,
     color: "#8142E6",
@@ -96,7 +100,6 @@ export function createKiroSubagents(model: string = "openai/gpt-5.3-codex", look
     description: string
     mode: "subagent"
     hidden: true
-    model: string
     prompt: string
     temperature: number
     permission: ReturnType<typeof basePermission>
@@ -110,7 +113,7 @@ export function createKiroSubagents(model: string = "openai/gpt-5.3-codex", look
       description: desc(name),
       mode: "subagent",
       hidden: true,
-      model,
+      // Don't set model field - let OpenCode use its default/current model
       prompt,
       temperature: 0.1,
       permission: basePermission(lookAtEnabled),

@@ -57,21 +57,26 @@ const KiroPlugin: Plugin = async (ctx) => {
   return {
     tool: tools as Record<string, ToolDefinition>,
     config: async (input: Config) => {
-      // Inject kiro agent
-      const kiroAgent = createKiroAgent(pluginConfig.agent_model, lookAtEnabled)
+      // Use model from OpenCode config for prompt hydration, fallback to plugin config default
+      const modelForPrompt = input.model || pluginConfig.agent_model
+      console.log(`[KiroPlugin] Config hook called. OpenCode model: ${input.model}, prompt hydration using: ${modelForPrompt}`)
+
+      // Inject kiro agent (no model field - respects OpenCode's model selection)
+      const kiroAgent = createKiroAgent(modelForPrompt, lookAtEnabled)
       if (kiroAgent) {
         input.agent = input.agent || {}
 
         // Cast to any because of potential type mismatch with strict SDK types
         // In runtime, this should work as Config merges agent definitions
         input.agent["kiro"] = kiroAgent as any
-        for (const [name, agent] of Object.entries(createKiroSubagents(pluginConfig.agent_model, lookAtEnabled))) {
+        for (const [name, agent] of Object.entries(createKiroSubagents(modelForPrompt, lookAtEnabled))) {
           input.agent[name] = agent as any
         }
 
         // Only register multimodal-looker agent if lookAt is enabled
         if (lookAtEnabled) {
-          const multimodalModel = pluginConfig.lookAt?.model || pluginConfig.agent_model
+          // Only set model if user explicitly configured lookAt.model
+          const multimodalModel = pluginConfig.lookAt?.model
           input.agent["multimodal-looker"] = createMultimodalLookerAgent(multimodalModel) as any
         }
       }

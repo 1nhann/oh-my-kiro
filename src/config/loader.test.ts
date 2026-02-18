@@ -74,8 +74,10 @@ describe("loadPluginConfig", () => {
       )
 
       const config = loadPluginConfig("", ctx())
-      expect(config.multimodal).toBe("openai/gpt-5.3-codex")
-      expect(config.agent_model).toBe("openai/gpt-5.3-codex")
+      // multimodal is deprecated and migrated to lookAt.model
+      expect(config.lookAt?.model).toBe("openai/gpt-5.3-codex")
+      // agent_model can now be set from config file
+      expect(config.agent_model).toBe("demo-model")
       expect(config.disabled_tools).toEqual([])
     })
   })
