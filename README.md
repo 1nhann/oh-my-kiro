@@ -11,6 +11,7 @@ Kiro is a spec-driven, multi-agent coding plugin for OpenCode.
 | Agent | Mode | Purpose |
 |---|---|---|
 | `kiro` | primary | Main orchestrator |
+| `kiroExplore` | subagent | Fast codebase exploration |
 | `requirements-first-workflow` | subagent | Build and refine specs |
 | `spec-task-execution` | subagent | Execute a spec task |
 | `context-gatherer` | subagent | Gather focused code context |
