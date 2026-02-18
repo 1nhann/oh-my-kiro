@@ -92,6 +92,19 @@ Example (`kiro.example.json`):
 }
 ```
 
+## Clipboard Files Queue
+
+Kiro automatically saves pasted images to a persistent queue, enabling image analysis even when using non-vision coding models.
+
+When `lookAt.enable` is `true`, the coding agent can analyze pasted images:
+
+```
+User: [pastes screenshot]
+User: What's in this image?
+
+Agent: [calls lookAt with index=-1 to analyze the most recent pasted image]
+```
+
 ## `/spec` Command
 
 > **Note:** This command is primarily used to trigger the agent to follow the spec workflow. Kiro generally operates in spec-driven mode by default, so `/spec` is not mandatory, it serves as an optional reminder/helper.

@@ -26,12 +26,15 @@ import { createBackgroundTools } from "./background-tools"
 
 import { createLSPTools } from "./lsp-tools"
 
+import { createClipboardFilesQueueTools } from "./clipboard-files-queue"
+
 // Re-export all tool creators
 export * from "./kiro-specific"
 export * from "./look-at"
 export * from "./background-tools"
 export { createAstGrepSearchTool, createAstGrepReplaceTool } from "./ast-grep"
 export { createLSPTools, createGetDiagnosticsTool, createRenameSymbolTool } from "./lsp-tools/tools"
+export { createClipboardFilesQueueTools } from "./clipboard-files-queue"
 
 /**
  * Managers container for sharing state across tools
@@ -126,6 +129,15 @@ export function createTools(args: {
   // LSP tools are always enabled (core feature)
   const lspTools = createLSPTools(ctx)
   for (const [name, tool] of Object.entries(lspTools)) {
+    if (!disabledTools.has(name)) {
+      tools[name] = tool
+    }
+  }
+
+  // Clipboard files queue tools are always enabled
+  // (hook saves files regardless of lookAt status)
+  const clipboardFilesQueueTools = createClipboardFilesQueueTools()
+  for (const [name, tool] of Object.entries(clipboardFilesQueueTools)) {
     if (!disabledTools.has(name)) {
       tools[name] = tool
     }

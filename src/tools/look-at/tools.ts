@@ -1,5 +1,5 @@
-import { basename } from "node:path"
-import { pathToFileURL } from "node:url"
+import { basename } from "path"
+import { pathToFileURL } from "url"
 import { tool, type PluginInput, type ToolDefinition } from "@opencode-ai/plugin"
 import { LOOK_AT_DESCRIPTION, MULTIMODAL_LOOKER_AGENT } from "./constants"
 import type { LookAtArgs } from "./types"
@@ -8,11 +8,8 @@ import { log } from "../../shared/logger"
 import { extractLatestAssistantText } from "./assistant-message-extractor"
 import type { LookAtArgsWithAlias } from "./look-at-arguments"
 import { normalizeArgs, validateArgs } from "./look-at-arguments"
-import {
-  extractBase64Data,
-  inferMimeTypeFromBase64,
-  inferMimeTypeFromFilePath,
-} from "./mime-type-inference"
+import { inferMimeTypeFromFilePath } from "./mime-type-inference"
+import { getClipboardFilesQueueManager } from "../../clipboard-files-queue"
 
 export { normalizeArgs, validateArgs } from "./look-at-arguments"
 
@@ -24,8 +21,8 @@ export function createLookAtTool(
     description: LOOK_AT_DESCRIPTION,
     args: {
       file_path: tool.schema.string().optional().describe("Absolute path to the file to analyze"),
-      image_data: tool.schema.string().optional().describe("Base64 encoded image data (for clipboard/pasted images)"),
       goal: tool.schema.string().describe("What specific information to extract from the file"),
+      index: tool.schema.number().optional().describe("Index into clipboard files queue: -1 = most recent, -2 = second recent, 0 = oldest"),
     },
     async execute(rawArgs: LookAtArgs, toolContext) {
       const args = normalizeArgs(rawArgs as LookAtArgsWithAlias)
@@ -35,36 +32,84 @@ export function createLookAtTool(
         return validationError
       }
 
-      const isBase64Input = Boolean(args.image_data)
-      const sourceDescription = isBase64Input ? "clipboard/pasted image" : args.file_path
-      log(`[look_at] Analyzing ${sourceDescription}, goal: ${args.goal}`)
+      const filePath = args.file_path
+      const stackIndex = args.index
+
+      // Determine input mode
+      const isStackInput = stackIndex !== undefined
+      const isFileInput = Boolean(filePath)
+
+      // Count input sources
+      const inputSourceCount = [isStackInput, isFileInput].filter(Boolean).length
+      if (inputSourceCount === 0) {
+        return "Error: Must provide one of: 'file_path' or 'index'."
+      }
+      if (inputSourceCount > 1) {
+        return "Error: Provide only one input source (file_path or index)."
+      }
+
+      let sourceDescription: string
       log("[look_at] Input summary", {
-        mode: isBase64Input ? "image_data" : "file_path",
+        mode: isStackInput ? "clipboard_queue" : "file_path",
         goalLength: args.goal.length,
         hasSessionID: Boolean(toolContext.sessionID),
         workingDirectory: toolContext.directory ?? ctx.directory,
+        stackIndex,
       })
-
-      const imageData = args.image_data
-      const filePath = args.file_path
 
       let mimeType: string
       let filePart: { type: "file"; mime: string; url: string; filename: string }
 
-      if (imageData) {
-        mimeType = inferMimeTypeFromBase64(imageData)
+      if (isStackInput) {
+        // Handle clipboard files queue input (session isolation)
+        const queueManager = getClipboardFilesQueueManager()
+        await queueManager.initialize()
+
+        // Only get files for current session (session isolation)
+        const sessionFiles = queueManager.getBySession(toolContext.sessionID)
+        if (sessionFiles.length === 0) {
+          return "Error: No files in the clipboard queue for this session. Paste a file first, then use lookAt with index=-1."
+        }
+
+        // Convert negative index to positive
+        // -1 = last (most recent) -> index 0 in queue (since queue is most recent first)
+        // -2 = second last -> index 1
+        // 0 = oldest -> index length-1
+        let actualIndex: number
+        if (stackIndex! < 0) {
+          // Negative: -1 = most recent (index 0), -2 = second recent (index 1)
+          actualIndex = Math.abs(stackIndex!) - 1
+        } else {
+          // Positive: 0 = oldest, 1 = second oldest
+          // Convert to queue index (which is 0 = most recent)
+          actualIndex = sessionFiles.length - 1 - stackIndex!
+        }
+
+        const savedFile = sessionFiles[actualIndex]
+        if (!savedFile) {
+          return `Error: No file at index ${stackIndex} in queue. Queue has ${sessionFiles.length} files. Valid range: -${sessionFiles.length} to ${sessionFiles.length - 1}.`
+        }
+
+        sourceDescription = `clipboard queue[${stackIndex}]: ${savedFile.filename}`
+        mimeType = savedFile.mime
         filePart = {
           type: "file",
           mime: mimeType,
-          url: `data:${mimeType};base64,${extractBase64Data(imageData)}`,
-          filename: `clipboard-image.${mimeType.split("/")[1] || "png"}`,
+          url: pathToFileURL(savedFile.path).href,
+          filename: savedFile.filename,
         }
-        log("[look_at] Prepared image_data file part", {
+        log("[look_at] Prepared clipboard_queue file part", {
+          id: savedFile.id,
+          filename: savedFile.filename,
+          path: savedFile.path,
           mimeType,
-          filename: filePart.filename,
-          rawLength: imageData.length,
+          size: savedFile.size,
+          requestedIndex: stackIndex,
+          actualIndex,
+          sessionID: toolContext.sessionID,
         })
       } else if (filePath) {
+        sourceDescription = filePath
         const file = Bun.file(filePath)
         const exists = await file.exists()
         const size = exists ? file.size : 0
@@ -84,10 +129,13 @@ export function createLookAtTool(
           urlPrefix: filePart.url.slice(0, 64),
         })
       } else {
-        return "Error: Must provide either 'file_path' or 'image_data'."
+        return "Error: No valid input source provided."
       }
 
-      const prompt = `Analyze this ${isBase64Input ? "image" : "file"} and extract the requested information.
+      log(`[look_at] Analyzing ${sourceDescription}, goal: ${args.goal}`)
+
+      const inputType = isStackInput ? "image from clipboard queue" : "file"
+      const prompt = `Analyze this ${inputType} and extract the requested information.
 
 Goal: ${args.goal}
 
@@ -148,15 +196,6 @@ Original error: ${createResult.error}`
       }
       // If malformed, agentModel stays undefined - let OpenCode decide
 
-      log(`[look_at] Sending prompt with ${isBase64Input ? "base64 image" : "file"} to session ${sessionID}`)
-      log("[look_at] Prompt config", {
-        agent: MULTIMODAL_LOOKER_AGENT,
-        sessionID,
-        parentSessionID: toolContext.sessionID,
-        model: agentModel ? `${agentModel.providerID}/${agentModel.modelID}` : "auto",
-        disabledTools: ["task", "lookAt", "read"],
-        mimeType: filePart.mime,
-      })
       try {
         await ctx.client.session.prompt({
           path: { id: sessionID },
@@ -213,7 +252,6 @@ Original error: ${createResult.error}`
         return "Error: No response from multimodal-looker agent"
       }
 
-      log(`[look_at] Got response, length: ${responseText.length}`)
       return responseText
     },
   })

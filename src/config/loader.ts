@@ -60,7 +60,6 @@ export function loadPluginConfig(
   _ctx: PluginInput,
 ): KiroPluginConfig {
   const userConfig = loadUserConfig()
-
   const finalConfig = mergeConfig(userConfig)
 
   // Log configuration if KIRO_DEBUG is set

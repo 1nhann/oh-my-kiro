@@ -7,6 +7,7 @@
  * - Context window recovery
  * - LSP tools integration
  * - /spec command for spec-driven development (registered as OpenCode command)
+ * - Clipboard files queue for pasted images
  */
 
 import type { Plugin, ToolDefinition } from "@opencode-ai/plugin"
@@ -18,6 +19,7 @@ import { createTools } from "./tools"
 import { createKiroAgent, createKiroSubagents } from "./agents/kiro"
 import { createMultimodalLookerAgent } from "./agents/multimodal-looker"
 import { loadBuiltinCommands } from "./features/builtin-commands"
+import { createHooks } from "./hooks"
 
 /**
  * Kiro Plugin Definition
@@ -40,12 +42,16 @@ const KiroPlugin: Plugin = async (ctx) => {
   // 4. Load builtin commands (e.g., /spec)
   const builtinCommands = loadBuiltinCommands(pluginConfig.disabled_commands)
 
+  // 5. Create hooks (chat.message for clipboard files queue)
+  const hooks = createHooks({ ctx, pluginConfig })
+
   // Log loaded features
   const features = [
     "Background tasks",
     "Context recovery",
     "LSP tools",
     `/spec command (${Object.keys(builtinCommands).length} builtin)`,
+    "Clipboard files queue",
   ]
   if (lookAtEnabled) {
     features.push("lookAt (multimodal)")
@@ -88,6 +94,8 @@ const KiroPlugin: Plugin = async (ctx) => {
         input.command[name] = cmd as any
       }
     },
+    // Register chat.message hook for clipboard files queue
+    "chat.message": hooks["chat.message"],
   }
 }
 
