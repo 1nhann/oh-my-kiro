@@ -38,13 +38,22 @@ oh-my-kiro/
 ├── src/
 │   ├── agents/                  # Kiro orchestrator + subagent definitions
 │   ├── background/              # Background task manager/runtime
+│   ├── clipboard-files-queue/   # Persistent queue for pasted images
 │   ├── config/                  # Config types, parsing, loading
 │   ├── features/
 │   │   └── builtin-commands/    # /spec command wiring
+│   ├── hooks/                   # Plugin lifecycle hooks
 │   ├── plugin/                  # Plugin type/registry helpers
 │   ├── shared/                  # Shared utilities
-│   └── tools/                   # Kiro tool implementations
-└── dist/                        # Build output
+│   └── tools/
+│       ├── ast-grep/            # AST search/replace tools
+│       ├── background-tools/    # Background task management tools
+│       ├── clipboard-files-queue/ # Clipboard queue tools
+│       ├── kiro-specific/       # Kiro-specific tools (prework, status)
+│       ├── look-at/             # Multimodal image analysis
+│       └── lsp-tools/           # LSP integration (diagnostics, rename)
+├── dist/                        # Build output
+└── assets/                      # Documentation assets
 ```
 
 ## Installation and Activation
