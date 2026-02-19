@@ -1,4 +1,4 @@
-> Kiro is great, Spec-Driven Development works, but the subscription credits are too limited, and the context window is too small for serious use. So I reverse-engineered Kiro and built oh-my-kiro — an open-source alternative with the same capabilities and better UX, 
+> Kiro is great, Spec-Driven Development works, but the subscription credits are too limited, and the context window is too small for serious use. So I reverse-engineered Kiro and built oh-my-kiro — an open-source alternative with the same capabilities and better UX, no more worrying about context limits, and full freedom to configure the underlying model.
 
 ![pic1](assets/image.png)
 
