@@ -1,3 +1,5 @@
+> Kiro is great, Spec-Driven Development works, but the subscription credits are too limited, and the context window is too small for serious use. So I reverse-engineered Kiro and built oh-my-kiro — an open-source alternative with the same capabilities and better UX, 
+
 ![pic1](assets/image.png)
 
 # Kiro Plugin for OpenCode
