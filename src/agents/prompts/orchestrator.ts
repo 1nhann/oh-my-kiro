@@ -344,9 +344,9 @@ backgroundTask({ agent: "general-task-execution", prompt: "Run security audit on
 **Pattern 2: Parallel then collect (blocking wait)**
 \`\`\`typescript
 // Start multiple parallel explorations
-const t1 = backgroundTask({ agent: "kiroExplore", prompt: "探索认证模块" })
-const t2 = backgroundTask({ agent: "kiroExplore", prompt: "探索数据库模块" })
-const t3 = backgroundTask({ agent: "kiroExplore", prompt: "探索API模块" })
+const t1 = backgroundTask({ agent: "kiroExplore", prompt: "Explore the authentication module" })
+const t2 = backgroundTask({ agent: "kiroExplore", prompt: "Explore the database module" })
+const t3 = backgroundTask({ agent: "kiroExplore", prompt: "Explore the API module" })
 
 // BLOCK until all complete
 waitForBackgroundTasks({ taskIds: [t1, t2, t3] })
