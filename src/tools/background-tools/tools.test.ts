@@ -11,6 +11,7 @@ function task(overrides: Partial<BackgroundTaskMeta> = {}): BackgroundTaskMeta {
   return {
     taskId: "bg-1",
     agent: "kiroExplore",
+    description: "Test task",
     prompt: "find auth flow",
     status: "running",
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -37,6 +38,8 @@ function manager(tasks: BackgroundTaskMeta[]): BackgroundTaskManager {
     waitForTask: async (id) => tasks.find((t) => t.taskId === id) || task({ taskId: id }),
     cleanup: () => 0,
     getTaskCount: () => tasks.length,
+    flushPendingNotifications: async () => {},
+    hasPendingNotifications: () => false,
   }
 }
 

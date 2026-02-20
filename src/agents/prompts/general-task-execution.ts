@@ -119,23 +119,43 @@ For maximum efficiency, use background tasks to run multiple operations in paral
   - Returns a taskId for tracking progress
   - Use when tasks can run independently
 - **backgroundTaskStatus**: Check the structured status snapshot (table + progress + notes).
-- **backgroundTaskOutput**:
-  - \`wait=false\`: get non-blocking status snapshot while task is running.
-  - \`wait=true\`: wait and return structured final result when completed.
-  - Timeout returns the latest status snapshot.
+- **backgroundTaskOutput**: Get result from completed tasks (non-blocking).
+  - You will be notified automatically when tasks complete.
+  - Use this to retrieve results after receiving notification.
 - **backgroundTaskCancel**:
   - \`taskId\`: cancel one task.
   - \`all=true\`: cancel all running/pending tasks and get a summary table.
+- **waitForBackgroundTasks**: BLOCKING wait for multiple tasks to complete.
+  - Use when you need all results before continuing (e.g., parallel exploration).
 
-**When to use background tasks:**
-- Running multiple independent explorations simultaneously
-- Starting long-running operations while continuing other work
-- Maximizing parallelism when the user requests parallel execution
+**Two Usage Patterns:**
+- **Fire-and-forget**: Start tasks, continue working, get notified when done
+- **Blocking wait**: Start tasks → waitForBackgroundTasks → collect results
 
-### Advanced Code Exploration (Subagent)
-- **kiroExplore**: Use \`task(subagent_type="kiroExplore")\` when you need deep codebase understanding or broad searches.
-  - **When to use**: "Where is X implemented?", "Find all files related to Y", "How does auth flow work?"
-  - **Why**: It runs parallel searches using ast-grep, grep, and glob to find comprehensive results.
+### Code Exploration (kiroExplore) - ALWAYS BACKGROUND, ALWAYS PARALLEL
+
+**kiroExplore = Grep on steroids, not a consultant. ALWAYS run multiple in parallel as background tasks.**
+
+\`\`\`typescript
+// CORRECT: Always background, always parallel
+backgroundTask(subagent_type="kiroExplore", description="Find auth implementations", prompt="...")
+backgroundTask(subagent_type="kiroExplore", description="Find error handling patterns", prompt="...")
+backgroundTask(subagent_type="kiroExplore", description="Find database access patterns", prompt="...")
+
+// THEN: Decide based on your task
+// - Need results before continuing? → waitForBackgroundTasks({ taskIds: [...] })
+// - Can work on other things? → Continue, collect results later
+
+// WRONG: Sequential or blocking - NEVER DO THIS
+task(subagent_type="kiroExplore", ...)  // Never use blocking task() for exploration
+\`\`\`
+
+**Rules (NON-NEGOTIABLE):**
+- Fire **2-5 kiroExplore agents in parallel** for any non-trivial codebase question
+- kiroExplore is **read-only** - safe to parallelize, no conflicts or confusion
+- **NEVER** use blocking \`task()\` for kiroExplore - always use \`backgroundTask\`
+- **After launching**: Think about whether you need the results now. If yes, call \`waitForBackgroundTasks\`. If no, continue other work.
+- Use \`backgroundTaskStatus\` or \`backgroundTaskOutput\` to collect results when needed
 
 ### LSP Tools (Code Intelligence)
 - **kiroGetDiagnostics**: Get code diagnostics (errors, warnings) for files.

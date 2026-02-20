@@ -44,7 +44,7 @@ function icon(status: "pending" | "running" | "completed" | "failed" | "cancelle
 
 function note(status: "pending" | "running" | "completed" | "failed" | "cancelled") {
   if (status === "pending") return "Queued: waiting for execution slot."
-  if (status === "running") return "Running: use backgroundTaskOutput(wait=false) to check without blocking."
+  if (status === "running") return "Running: you will be notified when complete. Continue working."
   if (status === "completed") return "Completed: use backgroundTaskOutput to fetch full result."
   if (status === "failed") return "Failed: inspect error and latest progress below."
   return "Cancelled: task was stopped before completion."
@@ -150,6 +150,7 @@ Returns a taskId that can be used to check status or cancel the task.`,
           })
         const taskId = await manager.createTask({
           agent: args.agent,
+          description: args.description,
           prompt: args.prompt,
           ctx: extras,
           onProgress: report,
@@ -245,22 +246,24 @@ ${task.error ? `\n## Error\n${task.error}\n` : ""}${task.result ? `\n## Result P
 
 /**
  * Background task output tool
- * Get the output of a completed task
+ * Get the output of a completed task (non-blocking)
  */
 export function createBackgroundTaskOutputTool(manager: BackgroundTaskManager): ToolDef {
   return {
     description: `Get the output/result of a background task.
 
-Waits for task completion if still running (with optional timeout).
-Returns the full result or error message.`,
+Returns the result if the task is completed. If the task is still running,
+returns current status instead (non-blocking).
+
+IMPORTANT: Do NOT use this to wait for results. Background tasks will notify
+you automatically when complete. Use this tool only to retrieve results after
+receiving a completion notification.`,
 
     parameters: {
       taskId: tool.schema.string().describe("The task ID to get output from"),
-      wait: tool.schema.boolean().optional().default(true).describe("Wait for completion if still running"),
-      timeout: tool.schema.number().optional().default(60000).describe("Timeout in ms when waiting (default: 60s)"),
     },
 
-    execute: async (args: { taskId: string; wait?: boolean; timeout?: number }, _ctx: ToolContext) => {
+    execute: async (args: { taskId: string }, _ctx: ToolContext) => {
       const task = manager.getTask(args.taskId)
 
       if (!task) {
@@ -271,76 +274,42 @@ Returns the full result or error message.`,
         }
       }
 
-      const shouldWait = args.wait === true
-      const timeoutRaw = Number(args.timeout ?? 60000)
-      const timeout = Number.isFinite(timeoutRaw) && timeoutRaw > 0 ? Math.min(timeoutRaw, 600000) : 60000
-
-      try {
-
-        if (task.status === "completed") {
-          const output = await manager.getTaskOutput(args.taskId)
-          return {
-            title: `Task output: ${task.status}`,
-            output: resultView(task, output),
-            metadata: {
-              taskId: task.taskId,
-              status: task.status,
-              view: "result",
-            },
-          }
-        }
-
-        if (task.status === "failed" || task.status === "cancelled") {
-          return {
-            title: `Task output: ${task.status}`,
-            output: statusView(task, "Task is not running. Returning latest status snapshot."),
-            metadata: {
-              taskId: task.taskId,
-              status: task.status,
-              view: "status",
-            },
-          }
-        }
-
-        if (shouldWait && (task.status === "pending" || task.status === "running")) {
-          const completedTask = await manager.waitForTask(args.taskId, timeout)
-          const output = await manager.getTaskOutput(args.taskId)
-
-          return {
-            title: `Task output: ${completedTask.status}`,
-            output: resultView(completedTask, output),
-            metadata: {
-              taskId: completedTask.taskId,
-              status: completedTask.status,
-              view: "result",
-            },
-          }
-        }
-
+      // Task completed - return result
+      if (task.status === "completed") {
+        const output = await manager.getTaskOutput(args.taskId)
         return {
-          title: `Task output: status`,
-          output: statusView(task, "Non-blocking check. Use wait=true to block until completion."),
+          title: `Task output: ${task.status}`,
+          output: resultView(task, output),
+          metadata: {
+            taskId: task.taskId,
+            status: task.status,
+            view: "result",
+          },
+        }
+      }
+
+      // Task failed or cancelled - return status with error
+      if (task.status === "failed" || task.status === "cancelled") {
+        return {
+          title: `Task output: ${task.status}`,
+          output: statusView(task, "Task is not running. Returning latest status snapshot."),
           metadata: {
             taskId: task.taskId,
             status: task.status,
             view: "status",
           },
         }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        const latest = manager.getTask(args.taskId)
-        if (latest && errorMessage.toLowerCase().includes("timeout")) {
-          return {
-            title: "Task output: timeout",
-            output: `${statusView(latest, `Wait timeout reached (${timeout}ms). Task may still be running.`)}\n\nTimeout: ${errorMessage}`,
-            metadata: { taskId: latest.taskId, status: latest.status, error: errorMessage, view: "status" },
-          }
-        }
-        return {
-          title: "Error getting task output",
-          output: `Error: ${errorMessage}`,
-          metadata: { error: errorMessage },
-        }
+      }
+
+      // Task still running or pending - return status, do NOT wait
+      return {
+        title: `Task output: still running`,
+        output: statusView(task, "Task is still running. You will be notified when complete. Continue working on other tasks."),
+        metadata: {
+          taskId: task.taskId,
+          status: task.status,
+          view: "status",
+        },
       }
     },
   }
@@ -377,7 +346,7 @@ Cannot be undone.`,
           if (!ok) return null
           return {
             taskId: task.taskId,
-            description: task.prompt.slice(0, 60),
+            description: task.description || task.prompt.slice(0, 60),
             status: task.status,
             sessionId: task.sessionId,
           }
@@ -514,6 +483,127 @@ Summary:
 }
 
 /**
+ * Wait for background tasks tool
+ * Blocking wait for multiple tasks to complete
+ */
+export function createWaitForBackgroundTasksTool(manager: BackgroundTaskManager): ToolDef {
+  return {
+    description: `Wait for one or more background tasks to complete (BLOCKING).
+
+This tool will BLOCK until ALL specified tasks have finished (completed, failed, or cancelled).
+Use this when you need to wait for parallel tasks before continuing.
+
+Typical usage:
+1. Start multiple backgroundTask calls for parallel exploration
+2. Call waitForBackgroundTasks with all task IDs
+3. The call will block until all tasks finish
+4. Then use backgroundTaskOutput to retrieve each result
+
+Example:
+- Start 3 kiroExplore tasks in parallel
+- Call waitForBackgroundTasks({ taskIds: ["bg-xxx", "bg-yyy", "bg-zzz"] })
+- Wait for all to complete
+- Retrieve results with backgroundTaskOutput
+
+Set waitMode="any" to return when ANY task completes (useful for racing).
+Default is waitMode="all" which waits for ALL tasks.`,
+
+    parameters: {
+      taskIds: tool.schema.array(tool.schema.string()).describe("Array of task IDs to wait for"),
+      waitMode: tool.schema.enum(["all", "any"]).optional().default("all").describe("'all' = wait for all tasks, 'any' = return when first task completes"),
+    },
+
+    execute: async (args: { taskIds: string[]; waitMode?: "all" | "any" }, _ctx: ToolContext) => {
+      const { taskIds, waitMode = "all" } = args
+      const startTime = Date.now()
+      const pollInterval = 500
+
+      if (!taskIds || taskIds.length === 0) {
+        return {
+          title: "No tasks to wait for",
+          output: "No task IDs provided.",
+          metadata: { error: "no_tasks" },
+        }
+      }
+
+      // Validate tasks exist
+      const tasks = taskIds.map((id) => ({ id, task: manager.getTask(id) }))
+      const notFound = tasks.filter((t) => !t.task)
+      if (notFound.length > 0) {
+        return {
+          title: "Task(s) not found",
+          output: `Task(s) not found: ${notFound.map((t) => t.id).join(", ")}`,
+          metadata: { error: "not_found", notFound: notFound.map((t) => t.id) },
+        }
+      }
+
+      // Status tracking
+      const isComplete = (status: string) => status === "completed" || status === "failed" || status === "cancelled"
+
+      // Wait loop - no timeout, wait forever
+      while (true) {
+        const currentTasks = taskIds.map((id) => manager.getTask(id))
+        const completedTasks = currentTasks.filter((t) => t && isComplete(t.status))
+        const runningTasks = currentTasks.filter((t) => t && !isComplete(t.status))
+
+        // Check completion condition
+        if (waitMode === "any" && completedTasks.length > 0) {
+          // Any mode: at least one completed
+          const completed = completedTasks[0]!
+          return {
+            title: `Task completed: ${completed.taskId}`,
+            output: `One task completed: ${completed.taskId}
+
+**Completed:** ${completedTasks.length}/${taskIds.length}
+**Still running:** ${runningTasks.length}
+
+Use backgroundTaskOutput to retrieve results. Remaining tasks will continue in background.`,
+            metadata: {
+              completedTaskId: completed.taskId,
+              completedCount: completedTasks.length,
+              runningCount: runningTasks.length,
+              waitMode: "any",
+            },
+          }
+        }
+
+        if (waitMode === "all" && completedTasks.length === taskIds.length) {
+          // All mode: all completed
+          const results = completedTasks.map((t) => ({
+            taskId: t!.taskId,
+            status: t!.status,
+            duration: sec(t!),
+          }))
+
+          const rows = results.map((r) => `| \`${r.taskId}\` | ${icon(r.status as any)} ${r.status} | ${r.duration}s |`).join("\n")
+
+          return {
+            title: `All ${taskIds.length} tasks completed`,
+            output: `All ${taskIds.length} tasks finished.
+
+| Task ID | Status | Duration |
+|---|---|---|
+${rows}
+
+Total wait time: ${Math.round((Date.now() - startTime) / 1000)}s
+
+Use backgroundTaskOutput to retrieve each result.`,
+            metadata: {
+              completedCount: completedTasks.length,
+              totalWaitMs: Date.now() - startTime,
+              results,
+            },
+          }
+        }
+
+        // Wait before next poll
+        await new Promise((resolve) => setTimeout(resolve, pollInterval))
+      }
+    },
+  }
+}
+
+/**
  * Create all background task tools
  */
 export function createBackgroundTools(manager: BackgroundTaskManager): Record<string, ToolDef> {
@@ -544,5 +634,6 @@ export function createBackgroundTools(manager: BackgroundTaskManager): Record<st
     backgroundTaskOutput: wrap(createBackgroundTaskOutputTool(manager)),
     backgroundTaskCancel: wrap(createBackgroundTaskCancelTool(manager)),
     listBackgroundTasks: wrap(createListBackgroundTasksTool(manager)),
+    waitForBackgroundTasks: wrap(createWaitForBackgroundTasksTool(manager)),
   }
 }

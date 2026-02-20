@@ -28,16 +28,10 @@ function loadConfigFromFile(filePath: string): Partial<KiroPluginConfig> | null 
   const content = readFileSync(filePath, "utf-8")
   const raw = parseJsonc(content)
   if (!raw) {
-    console.warn(`[KiroConfig] Failed to parse ${filePath}`)
     return null
   }
 
   const parsed = parseConfig(raw)
-  if (parsed.warnings.length > 0) {
-    console.warn(`[KiroConfig] Partial config loaded from ${filePath}: ${parsed.warnings.join("; ")}`)
-  } else {
-    console.log(`[KiroConfig] Loaded configuration from ${filePath}`)
-  }
   return parsed.config
 }
 
@@ -61,11 +55,6 @@ export function loadPluginConfig(
 ): KiroPluginConfig {
   const userConfig = loadUserConfig()
   const finalConfig = mergeConfig(userConfig)
-
-  // Log configuration if KIRO_DEBUG is set
-  if (process.env.KIRO_DEBUG === "true") {
-    console.log("[KiroConfig] Final configuration:", JSON.stringify(finalConfig, null, 2))
-  }
 
   return finalConfig
 }

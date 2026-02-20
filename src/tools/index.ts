@@ -143,17 +143,6 @@ export function createTools(args: {
     }
   }
 
-  // Log registered tools if KIRO_DEBUG is set
-  if (process.env.KIRO_DEBUG === "true") {
-    console.log(`[Kiro] Registered ${Object.keys(tools).length} tools:`, Object.keys(tools).join(", "))
-    if (disabledTools.size > 0) {
-      console.log(`[Kiro] Disabled tools:`, Array.from(disabledTools).join(", "))
-    }
-    if (!lookAtEnabled) {
-      console.log(`[Kiro] lookAt feature disabled`)
-    }
-  }
-
   return {
     tools,
     managers,

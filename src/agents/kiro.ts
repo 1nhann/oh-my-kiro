@@ -62,7 +62,6 @@ export function createKiroAgent(model: string = "openai/gpt-5.3-codex", lookAtEn
   const prompt = loadAgentPrompt("orchestrator", model, lookAtEnabled)
 
   if (!prompt) {
-    console.error("Failed to load orchestrator prompt")
     return null
   }
 

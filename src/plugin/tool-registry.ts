@@ -47,7 +47,6 @@ export class ToolRegistry {
    */
   getAllTools(): ToolDef[] {
     if (!this.ctx) {
-      console.warn("[ToolRegistry] Context not set, returning empty tools array")
       return []
     }
 
@@ -62,7 +61,6 @@ export class ToolRegistry {
    */
   getToolsByCategory(category: ToolCategory): ToolDef[] {
     if (!this.ctx) {
-      console.warn("[ToolRegistry] Context not set, returning empty tools array")
       return []
     }
 
@@ -77,7 +75,6 @@ export class ToolRegistry {
    */
   getTool(name: string): ToolDef | undefined {
     if (!this.ctx) {
-      console.warn("[ToolRegistry] Context not set, cannot create tool")
       return undefined
     }
 

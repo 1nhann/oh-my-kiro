@@ -13,8 +13,41 @@ import type {
   CreateBackgroundTaskOptions,
   ProgressUpdate,
 } from "./types"
+import { buildBackgroundTaskNotification } from "./notification-builder"
+import { isAbortedSessionError } from "./error-classifier"
 
 const NON_TERMINAL_FINISH_REASONS = new Set(["tool-calls", "unknown"])
+
+/** Delay before cleaning up completed tasks from memory */
+const TASK_CLEANUP_DELAY_MS = 5 * 60 * 1000 // 5 minutes
+
+/**
+ * Fetch model info from parent session messages
+ * Used to inherit model from parent session to background task
+ */
+async function getParentSessionModel(
+  client: OpencodeClient,
+  sessionID: string,
+): Promise<{ providerID: string; modelID: string } | undefined> {
+  try {
+    const messagesResp = await client.session.messages({
+      path: { id: sessionID },
+    })
+    const raw = (messagesResp as { data?: unknown }).data ?? []
+    const messages = Array.isArray(raw) ? raw : []
+
+    // Find the last message with model info
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i] as { info?: { model?: { providerID: string; modelID: string } } }
+      if (msg.info?.model?.providerID && msg.info?.model?.modelID) {
+        return msg.info.model
+      }
+    }
+  } catch {
+    // Ignore errors when fetching messages - use defaults
+  }
+  return undefined
+}
 
 type SessionMessage = {
   info?: {
@@ -40,6 +73,12 @@ export function createBackgroundTaskManager(client: OpencodeClient): IBackground
 
   // Abort controllers for running tasks
   const abortControllers = new Map<string, AbortController>()
+
+  // Track pending tasks per parent session for notifications
+  const pendingByParent = new Map<string, Set<string>>()
+
+  // Completion timers for cleanup
+  const completionTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
   /**
    * Generate a unique task ID
@@ -76,10 +115,121 @@ export function createBackgroundTaskManager(client: OpencodeClient): IBackground
   }
 
   /**
+   * Send notification when task completes
+   * Only sends notification when ALL tasks for this parent session are complete.
+   * This avoids spamming the main agent with partial completion notifications.
+   * If the agent is using waitForBackgroundTasks, it will return when all complete anyway.
+   */
+  async function sendNotification(task: BackgroundTaskMeta): Promise<void> {
+    const parentSessionID = task.parentContext.sessionID
+
+    // Update pending set
+    const pendingSet = pendingByParent.get(parentSessionID)
+    if (pendingSet) {
+      pendingSet.delete(task.taskId)
+      if (pendingSet.size === 0) {
+        pendingByParent.delete(parentSessionID)
+      }
+    }
+
+    const allComplete = !pendingSet || pendingSet.size === 0
+    const remainingCount = pendingSet?.size ?? 0
+
+    // Only send notification when ALL tasks are complete
+    // If there are still running tasks, skip notification
+    if (!allComplete) {
+      return
+    }
+
+    // Get all completed tasks for this parent session
+    const completedTasks = Array.from(tasks.values()).filter(
+      (t) =>
+        t.parentContext.sessionID === parentSessionID &&
+        t.status !== "running" &&
+        t.status !== "pending"
+    )
+
+    const notification = buildBackgroundTaskNotification({
+      task,
+      allComplete,
+      remainingCount,
+      completedTasks,
+    })
+
+    // Try to get agent/model from parent session for correct reply context
+    let agent: string | undefined
+    let model: { providerID: string; modelID: string } | undefined
+
+    try {
+      const messagesResp = await client.session.messages({
+        path: { id: parentSessionID },
+      })
+      const raw = (messagesResp as { data?: unknown }).data ?? []
+      const messages = Array.isArray(raw) ? raw : []
+
+      // Find the last message with agent/model info
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const msg = messages[i] as { info?: { agent?: string; model?: { providerID: string; modelID: string } } }
+        if (msg.info?.agent || msg.info?.model) {
+          agent = msg.info.agent
+          if (msg.info.model?.providerID && msg.info.model?.modelID) {
+            model = msg.info.model
+          }
+          break
+        }
+      }
+    } catch (error) {
+      // Skip notification if parent session was aborted
+      if (isAbortedSessionError(error)) {
+        return
+      }
+      // Ignore other errors when fetching messages - use defaults
+    }
+
+    // Send notification only when all complete
+    try {
+      await client.session.promptAsync({
+        path: { id: parentSessionID },
+        body: {
+          noReply: false, // Trigger reply since all tasks are complete
+          ...(agent !== undefined ? { agent } : {}),
+          ...(model !== undefined ? { model } : {}),
+          parts: [{ type: "text", text: notification }],
+        },
+      })
+    } catch (error) {
+      // Skip notification if parent session was aborted
+      if (isAbortedSessionError(error)) {
+        return
+      }
+      // Ignore other errors
+    }
+
+    // Schedule cleanup
+    for (const completedTask of completedTasks) {
+      const taskId = completedTask.taskId
+      const existingTimer = completionTimers.get(taskId)
+      if (existingTimer) {
+        clearTimeout(existingTimer)
+        completionTimers.delete(taskId)
+      }
+
+      const timer = setTimeout(() => {
+        completionTimers.delete(taskId)
+        if (tasks.has(taskId)) {
+          tasks.delete(taskId)
+        }
+      }, TASK_CLEANUP_DELAY_MS)
+
+      completionTimers.set(taskId, timer)
+    }
+  }
+
+  /**
    * Execute a background task
    */
   async function executeTask(taskId: string, options: CreateBackgroundTaskOptions): Promise<void> {
-    const { agent, prompt, ctx, onProgress } = options
+    const { agent, prompt, ctx, onProgress, model: explicitModel } = options
     if (!isSubagentName(agent)) {
       throw new Error(`Unknown agent '${agent}'`)
     }
@@ -119,11 +269,18 @@ export function createBackgroundTaskManager(client: OpencodeClient): IBackground
         throw new Error("Task cancelled")
       }
 
+      // Get model from explicit param, or from ctx, or fetch from parent session
+      let model = explicitModel ?? ctx.model
+      if (!model) {
+        model = await getParentSessionModel(client, ctx.sessionID)
+      }
+
       const promptResult = await client.session.promptAsync({
         path: { id: sessionId },
         body: {
           agent,
           system: getAgentSystemPrompt(agent),
+          ...(model ? { model } : {}),
           parts: [{ type: "text", text: prompt }],
         },
       })
@@ -208,10 +365,12 @@ export function createBackgroundTaskManager(client: OpencodeClient): IBackground
   return {
     async createTask(options: CreateBackgroundTaskOptions): Promise<string> {
       const taskId = generateTaskId()
+      const description = options.description ?? `${options.agent} task`
 
       const task: BackgroundTaskMeta = {
         taskId,
         agent: options.agent,
+        description,
         prompt: options.prompt,
         status: "pending",
         createdAt: new Date(),
@@ -226,10 +385,33 @@ export function createBackgroundTaskManager(client: OpencodeClient): IBackground
 
       tasks.set(taskId, task)
 
+      // Track pending task for notifications
+      const parentSessionID = options.ctx.sessionID
+      if (!pendingByParent.has(parentSessionID)) {
+        pendingByParent.set(parentSessionID, new Set())
+      }
+      pendingByParent.get(parentSessionID)!.add(taskId)
+
       // Start execution in background (don't await)
-      executeTask(taskId, options).catch((err) => {
-        console.error(`[BackgroundTask] Unhandled error in task ${taskId}:`, err)
-      })
+      executeTask(taskId, options)
+        .then(() => {
+          // Send notification immediately when task completes
+          const completedTask = tasks.get(taskId)
+          if (completedTask) {
+            sendNotification(completedTask).catch(() => {
+              // Ignore notification errors
+            })
+          }
+        })
+        .catch(() => {
+          // Still send notification on error
+          const failedTask = tasks.get(taskId)
+          if (failedTask) {
+            sendNotification(failedTask).catch(() => {
+              // Ignore notification errors
+            })
+          }
+        })
 
       return taskId
     },

@@ -31,16 +31,6 @@ describe("look-at tool", () => {
       const normalized = normalizeArgs(args as any)
       expect(normalized.file_path).toBe("/preferred.png")
     })
-
-    // given image_data provided
-    // when called with base64 image data
-    // then preserve image_data in normalized args
-    test("preserves image_data when provided", () => {
-      const args = { image_data: "data:image/png;base64,iVBORw0KGgo=", goal: "analyze" }
-      const normalized = normalizeArgs(args as any)
-      expect(normalized.image_data).toBe("data:image/png;base64,iVBORw0KGgo=")
-      expect(normalized.file_path).toBeUndefined()
-    })
   })
 
   describe("validateArgs", () => {
@@ -52,31 +42,13 @@ describe("look-at tool", () => {
       expect(validateArgs(args)).toBeNull()
     })
 
-    // given valid arguments with image_data
-    // when validated
-    // then return null (no error)
-    test("returns null for valid args with image_data", () => {
-      const args = { image_data: "data:image/png;base64,iVBORw0KGgo=", goal: "analyze" }
-      expect(validateArgs(args)).toBeNull()
-    })
-
-    // given neither file_path nor image_data
+    // given no file_path
     // when validated
     // then clear error message
-    test("returns error when neither file_path nor image_data provided", () => {
+    test("returns error when file_path not provided", () => {
       const args = { goal: "analyze" } as any
       const error = validateArgs(args)
       expect(error).toContain("file_path")
-      expect(error).toContain("image_data")
-    })
-
-    // given both file_path and image_data
-    // when validated
-    // then return error (mutually exclusive)
-    test("returns error when both file_path and image_data provided", () => {
-      const args = { file_path: "/path.png", image_data: "base64data", goal: "analyze" }
-      const error = validateArgs(args)
-      expect(error).toContain("only one")
     })
 
     // given goal missing
@@ -96,17 +68,6 @@ describe("look-at tool", () => {
       const args = { file_path: "", goal: "analyze" }
       const error = validateArgs(args)
       expect(error).toContain("file_path")
-      expect(error).toContain("image_data")
-    })
-
-    // given image_data is empty string
-    // when validated
-    // then return error
-    test("returns error when image_data is empty string", () => {
-      const args = { image_data: "", goal: "analyze" }
-      const error = validateArgs(args)
-      expect(error).toContain("file_path")
-      expect(error).toContain("image_data")
     })
 
     // given file_path is a remote HTTP URL
@@ -453,113 +414,6 @@ describe("look-at tool", () => {
 
       expect(result).toContain("Error")
       expect(result).toContain("multimodal-looker")
-    })
-  })
-
-  describe("createLookAtTool with image_data", () => {
-    // given base64 image data is provided
-    // when LookAt tool executed
-    // then should send data URL to sync prompt
-    test("sends data URL when image_data provided", async () => {
-      let promptBody: any
-
-      const mockClient = {
-        app: {
-          agents: async () => ({ data: [] }),
-        },
-        session: {
-          get: async () => ({ data: { directory: "/project" } }),
-          create: async () => ({ data: { id: "ses_image_data_test" } }),
-          prompt: async (input: any) => {
-            promptBody = input.body
-            return { data: {} }
-          },
-          messages: async () => ({
-            data: [
-              { info: { role: "assistant", time: { created: 1 } }, parts: [{ type: "text", text: "analyzed" }] },
-            ],
-          }),
-        },
-      }
-
-      const tool = createLookAtTool({
-        client: mockClient,
-        directory: "/project",
-      } as any)
-
-      const toolContext: ToolContext = {
-        sessionID: "parent-session",
-        messageID: "parent-message",
-        agent: "sisyphus",
-        directory: "/project",
-        worktree: "/project",
-        abort: new AbortController().signal,
-        metadata: () => {},
-        ask: async () => {},
-      }
-
-      await tool.execute(
-        { image_data: "data:image/png;base64,iVBORw0KGgo=", goal: "describe this image" },
-        toolContext
-      )
-
-      const filePart = promptBody.parts.find((p: any) => p.type === "file")
-      expect(filePart).toBeDefined()
-      expect(filePart.url).toContain("data:image/png;base64")
-      expect(filePart.mime).toBe("image/png")
-      expect(filePart.filename).toContain("clipboard-image")
-    })
-
-    // given raw base64 without data URI prefix
-    // when LookAt tool executed
-    // then should detect mime type and create proper data URL
-    test("handles raw base64 without data URI prefix", async () => {
-      let promptBody: any
-
-      const mockClient = {
-        app: {
-          agents: async () => ({ data: [] }),
-        },
-        session: {
-          get: async () => ({ data: { directory: "/project" } }),
-          create: async () => ({ data: { id: "ses_raw_base64_test" } }),
-          prompt: async (input: any) => {
-            promptBody = input.body
-            return { data: {} }
-          },
-          messages: async () => ({
-            data: [
-              { info: { role: "assistant", time: { created: 1 } }, parts: [{ type: "text", text: "analyzed" }] },
-            ],
-          }),
-        },
-      }
-
-      const tool = createLookAtTool({
-        client: mockClient,
-        directory: "/project",
-      } as any)
-
-      const toolContext: ToolContext = {
-        sessionID: "parent-session",
-        messageID: "parent-message",
-        agent: "sisyphus",
-        directory: "/project",
-        worktree: "/project",
-        abort: new AbortController().signal,
-        metadata: () => {},
-        ask: async () => {},
-      }
-
-      await tool.execute(
-        { image_data: "iVBORw0KGgo=", goal: "analyze" },
-        toolContext
-      )
-
-      const filePart = promptBody.parts.find((p: any) => p.type === "file")
-      expect(filePart).toBeDefined()
-      expect(filePart.url).toContain("data:")
-      expect(filePart.url).toContain("base64")
     })
   })
 })

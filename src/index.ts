@@ -4,6 +4,7 @@
  *
  * Features:
  * - Background task execution with parallel subagents
+ * - Event-driven notification (like OpenCode PR #13261)
  * - Context window recovery
  * - LSP tools integration
  * - /spec command for spec-driven development (registered as OpenCode command)
@@ -25,8 +26,6 @@ import { createHooks } from "./hooks"
  * Kiro Plugin Definition
  */
 const KiroPlugin: Plugin = async (ctx) => {
-  console.log("[KiroPlugin] Loading plugin...")
-
   // 1. Load configuration
   const pluginConfig = loadPluginConfig(ctx.directory, ctx)
 
@@ -34,7 +33,7 @@ const KiroPlugin: Plugin = async (ctx) => {
   const lookAtEnabled = pluginConfig.lookAt?.enable !== false
 
   // 3. Create tools (with managers)
-  const { tools } = createTools({
+  const { tools, managers } = createTools({
     ctx,
     pluginConfig,
   })
@@ -42,30 +41,18 @@ const KiroPlugin: Plugin = async (ctx) => {
   // 4. Load builtin commands (e.g., /spec)
   const builtinCommands = loadBuiltinCommands(pluginConfig.disabled_commands)
 
-  // 5. Create hooks (chat.message for clipboard files queue)
-  const hooks = createHooks({ ctx, pluginConfig })
-
-  // Log loaded features
-  const features = [
-    "Background tasks",
-    "Context recovery",
-    "LSP tools",
-    `/spec command (${Object.keys(builtinCommands).length} builtin)`,
-    "Clipboard files queue",
-  ]
-  if (lookAtEnabled) {
-    features.push("lookAt (multimodal)")
-  }
-  console.log(`[KiroPlugin] Features: ${features.join(", ")}`)
-  console.log(`[KiroPlugin] Loaded ${Object.keys(tools).length} tools`)
-  console.log("[KiroPlugin] Loaded successfully.")
+  // 5. Create hooks (chat.message for clipboard files queue, event for session.status)
+  const hooks = createHooks({
+    ctx,
+    pluginConfig,
+    taskManager: managers.backgroundTaskManager,
+  })
 
   return {
     tool: tools as Record<string, ToolDefinition>,
     config: async (input: Config) => {
       // Use model from OpenCode config for prompt hydration, fallback to plugin config default
       const modelForPrompt = input.model || pluginConfig.agent_model
-      console.log(`[KiroPlugin] Config hook called. OpenCode model: ${input.model}, prompt hydration using: ${modelForPrompt}`)
 
       // Inject kiro agent (no model field - respects OpenCode's model selection)
       const kiroAgent = createKiroAgent(modelForPrompt, lookAtEnabled)
@@ -96,6 +83,8 @@ const KiroPlugin: Plugin = async (ctx) => {
     },
     // Register chat.message hook for clipboard files queue
     "chat.message": hooks["chat.message"],
+    // Register event hook for session.status (flushes pending notifications)
+    event: hooks.event,
   }
 }
 

@@ -78,8 +78,9 @@ Tools: list → glob/grep → read
 When gathering context for multiple independent areas, use backgroundTask for parallel execution:
 - backgroundTask: Start parallel exploration of different code areas
 - backgroundTaskStatus: Check a structured status snapshot (table + progress + notes)
-- backgroundTaskOutput: Use \`wait=false\` for non-blocking snapshot, \`wait=true\` to wait for final result
+- backgroundTaskOutput: Get result from completed tasks (non-blocking - you'll be notified when tasks complete)
 - backgroundTaskCancel: Cancel one task with \`taskId\`, or all running/pending tasks with \`all=true\`
+- waitForBackgroundTasks: BLOCKING wait for multiple tasks. Use when you need all results before continuing.
 
 ## Tool Call Budget
 

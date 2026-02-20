@@ -278,10 +278,30 @@ The user will likely need to refine the specification as implementation progress
 
 You have access to powerful tools for code analysis and exploration. Use them appropriately:
 
-### 1. Advanced Code Exploration (Subagent)
-Use \`task(subagent_type="kiroExplore")\` when you need deep codebase understanding or broad searches.
-- **When to use**: "Where is X implemented?", "Find all files related to Y", "How does the auth flow work?"
-- **Why**: It runs parallel searches using ast-grep, grep, and glob to find comprehensive results.
+### 1. Code Exploration (kiroExplore) - ALWAYS BACKGROUND, ALWAYS PARALLEL
+
+**kiroExplore = Grep on steroids, not a consultant. ALWAYS run multiple in parallel as background tasks.**
+
+\`\`\`typescript
+// CORRECT: Always background, always parallel
+backgroundTask(subagent_type="kiroExplore", description="Find auth implementations", prompt="...")
+backgroundTask(subagent_type="kiroExplore", description="Find error handling patterns", prompt="...")
+backgroundTask(subagent_type="kiroExplore", description="Find database access patterns", prompt="...")
+
+// THEN: Decide based on your task
+// - Need results before continuing? → waitForBackgroundTasks({ taskIds: [...] })
+// - Can work on other things? → Continue, collect results later
+
+// WRONG: Sequential or blocking - NEVER DO THIS
+task(subagent_type="kiroExplore", ...)  // Never use blocking task() for exploration
+\`\`\`
+
+**Rules (NON-NEGOTIABLE):**
+- Fire **2-5 kiroExplore agents in parallel** for any non-trivial codebase question
+- kiroExplore is **read-only** - safe to parallelize, no conflicts or confusion
+- **NEVER** use blocking \`task()\` for kiroExplore - always use \`backgroundTask\`
+- **After launching**: Think about whether you need the results now. If yes, call \`waitForBackgroundTasks\`. If no, continue other work.
+- Use \`backgroundTaskStatus\` or \`backgroundTaskOutput\` to collect results when needed
 
 ### 2. Multimodal Analysis (Tool)
 Use \`lookAt\` tool when you need to analyze images, PDFs, or diagrams.
@@ -302,18 +322,44 @@ For maximum efficiency, use background tasks to run multiple operations in paral
   - Returns a taskId for tracking progress
   - Use when tasks can run independently
 - **backgroundTaskStatus**: Check the structured status snapshot (table + progress + notes).
-- **backgroundTaskOutput**:
-  - \`wait=false\`: get a non-blocking structured status snapshot.
-  - \`wait=true\`: wait for completion and return structured result output.
-  - On timeout: returns latest status snapshot + timeout note.
+- **backgroundTaskOutput**: Get result from completed tasks (non-blocking).
+  - You will be notified automatically when tasks complete.
+  - Use this to retrieve results after receiving notification.
 - **backgroundTaskCancel**:
   - \`taskId\`: cancel a single running/pending task.
   - \`all=true\`: cancel all running/pending tasks and return a summary table.
+- **waitForBackgroundTasks**: BLOCKING wait for multiple tasks to complete.
+  - \`taskIds\`: array of task IDs to wait for
+  - \`waitMode\`: "all" (wait for all) or "any" (return when first completes)
 
-**When to use background tasks:**
-- Running multiple independent explorations simultaneously
-- Starting long-running operations while continuing other work
-- Maximizing parallelism when the user explicitly asks for parallel execution
+**Two Usage Patterns:**
+
+**Pattern 1: Fire-and-forget (parallel, non-blocking)**
+\`\`\`typescript
+// Start background tasks, continue working, get notified when done
+backgroundTask({ agent: "general-task-execution", prompt: "Run security audit on auth.ts" })
+// Continue other work... you'll be notified when complete
+\`\`\`
+
+**Pattern 2: Parallel then collect (blocking wait)**
+\`\`\`typescript
+// Start multiple parallel explorations
+const t1 = backgroundTask({ agent: "kiroExplore", prompt: "探索认证模块" })
+const t2 = backgroundTask({ agent: "kiroExplore", prompt: "探索数据库模块" })
+const t3 = backgroundTask({ agent: "kiroExplore", prompt: "探索API模块" })
+
+// BLOCK until all complete
+waitForBackgroundTasks({ taskIds: [t1, t2, t3] })
+
+// Now collect results
+const r1 = backgroundTaskOutput({ taskId: t1 })
+const r2 = backgroundTaskOutput({ taskId: t2 })
+const r3 = backgroundTaskOutput({ taskId: t3 })
+\`\`\`
+
+**When to use which pattern:**
+- Fire-and-forget: Code review, testing, long-running checks that shouldn't block your work
+- Blocking wait: When you need all results before continuing (e.g., parallel exploration for analysis)
 
 ### 6. LSP Tools (Code Intelligence)
 - **kiroGetDiagnostics**: Get code diagnostics (errors, warnings) for files.

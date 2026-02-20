@@ -15,6 +15,8 @@ export interface ToolContextWithExtras {
   abort: AbortSignal
   metadata: (input: { title?: string; metadata?: Record<string, unknown> }) => void | Promise<void>
   callID?: string
+  /** Model info from parent session (optional, may be fetched from API if not provided) */
+  model?: { providerID: string; modelID: string }
 }
 
 export interface SubagentSessionMessage {

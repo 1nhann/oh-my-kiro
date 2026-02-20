@@ -23,6 +23,8 @@ export interface BackgroundTaskMeta {
   taskId: string
   /** Agent type used */
   agent: string
+  /** Short description for notifications */
+  description: string
   /** Original prompt */
   prompt: string
   /** Task status */
@@ -64,9 +66,13 @@ export interface ProgressUpdate {
  */
 export interface CreateBackgroundTaskOptions {
   agent: string
+  /** Short description for notifications */
+  description?: string
   prompt: string
   ctx: ToolContextWithExtras
   onProgress?: (update: ProgressUpdate) => void
+  /** Model to use for the background task (inherited from parent session) */
+  model?: { providerID: string; modelID: string }
 }
 
 /**

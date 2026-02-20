@@ -71,6 +71,5 @@ function hydrate(prompt: string, model?: string, lookAtEnabled: boolean = true) 
 export function loadAgentPrompt(agentName: string, model?: string, lookAtEnabled: boolean = true): string | null {
   const prompt = getPrompt(agentName)
   if (prompt) return hydrate(prompt, model, lookAtEnabled)
-  console.warn(`Agent prompt not found for ${agentName}.`)
   return null
 }
