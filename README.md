@@ -1,4 +1,5 @@
 ![pic1](assets/image.png)
+# https://inhann.top/2026/02/25/browser-agent/
 # Oh My Kiro Plugin for OpenCode
 
 Oh My Kiro is a spec-driven, multi-agent coding plugin for [OpenCode](https://github.com/opencode-ai/opencode).
