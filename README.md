@@ -63,6 +63,21 @@ Edit `~/.config/opencode/opencode.jsonc`:
 }
 ```
 
+```bash
+# 1. Install Jupyter
+pip install jupyter
+
+# 2. Install jslab kernel (JavaScript kernel based on tslab)
+npm install -g tslab
+tslab install
+
+# 3. (Optional) Start Jupyter server manually
+jupyter server --no-browser --port=8888 --IdentityProvider.token=your-token
+
+# Or let Kiro auto-spawn one (no manual setup needed)
+```
+
+
 ## Configuration
 
 Oh My Kiro reads config from `~/.config/opencode/kiro/kiro.json`:
