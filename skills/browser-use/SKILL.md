@@ -9,15 +9,15 @@ Browser automation using Stagehand library through Kiro's `execute_code` tool.
 
 ## Key Feature: State Persistence
 
-**Variables persist across calls** when using the same `path`:
+**Variables persist across calls** when using the same `notebook_file`:
 - Initialize Stagehand once, reuse in all later calls
 - No need to re-import or re-initialize
 - Perfect for multi-step workflows
 
 ```
-Call 1 (path: browser.ipynb): const stagehand = new Stagehand(...); await stagehand.init();
-Call 2 (path: browser.ipynb): await stagehand.act("click login");  // stagehand exists!
-Call 3 (path: browser.ipynb): await stagehand.extract(...);        // still exists!
+Call 1 (notebook_file: browser.ipynb): const stagehand = new Stagehand(...); await stagehand.init();
+Call 2 (notebook_file: browser.ipynb): await stagehand.act("click login");  // stagehand exists!
+Call 3 (notebook_file: browser.ipynb): await stagehand.extract(...);        // still exists!
 ```
 
 ## Quick Start
@@ -60,7 +60,7 @@ const title = await stagehand.extract("get the page title", z.string());
 console.log("Title:", title);
 ```
 
-## Proxy Configuration (重要)
+## Proxy Configuration
 
 Use proxy to capture and analyze network traffic. Configure via `localBrowserLaunchOptions.proxy`:
 
@@ -96,16 +96,6 @@ const stagehand = new Stagehand({
   },
 });
 ```
-
-### Common Proxy Tools
-
-| Tool | Default Address | Use Case |
-|------|-----------------|----------|
-| Burp Suite | `http://127.0.0.1:8080` | Security testing, traffic analysis |
-| Charles | `http://127.0.0.1:8888` | HTTP debugging |
-| mitmproxy | `http://127.0.0.1:8080` | Traffic interception, API analysis |
-| Fiddler | `http://127.0.0.1:8866` | Windows HTTP debugging |
-| SOCKS5 | `socks5://127.0.0.1:1080` | Tunnel all traffic |
 
 ### Use Proxy for browser
 
@@ -159,7 +149,7 @@ Configure in `~/.config/opencode/kiro/kiro.json`:
 | Provider | BROWSER_LLM_BASE_URL | BROWSER_LLM_MODEL |
 |----------|---------------------|-------------------|
 | OpenAI | `https://api.openai.com/v1` | `gpt-4o` |
-| Zhipu AI (智谱) | `https://open.bigmodel.cn/api/coding/paas/v4` | `glm-5` |
+| Zhipu AI| `https://open.bigmodel.cn/api/coding/paas/v4` | `glm-5` |
 | DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
 | Moonshot | `https://api.moonshot.cn/v1` | `moonshot-v1-8k` |
 | Ollama | `http://localhost:11434/v1` | `llama3` |
