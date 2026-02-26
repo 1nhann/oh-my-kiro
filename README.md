@@ -72,7 +72,7 @@ npm install -g tslab
 tslab install
 
 # 3. (Optional) Start Jupyter server manually
-jupyter server --no-browser --port=8888 --IdentityProvider.token=your-token
+jupyter server --no-browser --port=8888 --IdentityProvider.token=your-token --ServerApp.allow_origin='*'
 
 # Or let Kiro auto-spawn one (no manual setup needed)
 ```
@@ -267,7 +267,7 @@ npm install -g tslab
 tslab install
 
 # 3. (Optional) Start Jupyter server manually
-jupyter server --no-browser --port=8888 --IdentityProvider.token=your-token
+jupyter server --no-browser --port=8888 --IdentityProvider.token=your-token --ServerApp.allow_origin='*'
 
 # Or let Kiro auto-spawn one (no manual setup needed)
 ```
